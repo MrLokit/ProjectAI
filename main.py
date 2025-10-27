@@ -23,7 +23,6 @@ class UltraMegaJarvis:
         self.microphone = sr.Microphone()
         self.tts_engine = pyttsx3.init()
 
-        # УЛЬТРА МЕГА ДАННЫЕ - профессиональный уровень
         self.intents = self.create_mega_dataset()
 
         self.vectorizer = None
@@ -170,7 +169,6 @@ class UltraMegaJarvis:
         if len(variations) >= target_count:
             return variations[:target_count]
 
-        # Добавляем синонимы и вариации
         synonyms = {
             "привет": ["приветик", "приветствую", "здравствуй"],
             "спасибо": ["благодарю", "мерси", "thanks"],
@@ -185,7 +183,6 @@ class UltraMegaJarvis:
                 if len(variations) >= target_count:
                     break
 
-                # Добавляем синонимы
                 for word, syns in synonyms.items():
                     if word in phrase and len(variations) < target_count:
                         for syn in syns:
@@ -195,11 +192,9 @@ class UltraMegaJarvis:
                                 if len(variations) >= target_count:
                                     break
 
-                # Добавляем с восклицательными знаками
                 if len(variations) < target_count and random.random() > 0.7:
                     variations.append(phrase + "!")
 
-                # Добавляем с вопросами
                 if len(variations) < target_count and random.random() > 0.7:
                     variations.append(phrase + "?")
 
@@ -220,7 +215,6 @@ class UltraMegaJarvis:
     def preprocess_text(self, text):
         """Профессиональная предобработка текста"""
         text = text.lower()
-        # Удаляем лишние символы, но сохраняем важные для интонации
         text = re.sub(r'[^\w\s!?]', ' ', text)
         text = re.sub(r'\s+', ' ', text).strip()
         return text
@@ -228,35 +222,28 @@ class UltraMegaJarvis:
     def create_ultra_mega_network(self, input_dim, output_dim):
         """Создание УЛЬТРА-МЕГА архитектуры нейросети"""
         model = Sequential([
-            # Первый слой - мощный и широкий
             Dense(1024, activation='relu', input_shape=(input_dim,),
                   kernel_regularizer=l2(0.001)),
             BatchNormalization(),
             Dropout(0.6),
 
-            # Второй слой
             Dense(512, activation='relu', kernel_regularizer=l2(0.001)),
             BatchNormalization(),
             Dropout(0.5),
 
-            # Третий слой
             Dense(256, activation='relu', kernel_regularizer=l2(0.001)),
             BatchNormalization(),
             Dropout(0.4),
 
-            # Четвертый слой
             Dense(128, activation='relu', kernel_regularizer=l2(0.001)),
             Dropout(0.3),
 
-            # Пятый слой
             Dense(64, activation='relu'),
             Dropout(0.2),
 
-            # Выходной слой
             Dense(output_dim, activation='softmax')
         ])
 
-        # Профессиональный компилятор
         model.compile(
             optimizer=tf.keras.optimizers.Adam(
                 learning_rate=0.0005,
@@ -274,13 +261,11 @@ class UltraMegaJarvis:
         """УЛЬТРА-МЕГА обучение нейросети"""
         print("🚀 Запуск УЛЬТРА-МЕГА обучения нейросети...")
 
-        # Подготовка данных
         texts, labels = self.prepare_training_data()
 
         print(f"📊 Всего примеров для обучения: {len(texts)}")
         print(f"🎯 Количество классов: {len(set(labels))}")
 
-        # Профессиональный векторизатор
         self.vectorizer = TfidfVectorizer(
             analyzer='word',
             ngram_range=(1, 3),
@@ -297,11 +282,9 @@ class UltraMegaJarvis:
         X = self.vectorizer.fit_transform(texts).toarray()
         print(f"🔢 Размерность данных после векторизации: {X.shape}")
 
-        # Кодирование меток
         self.label_encoder = LabelEncoder()
         y = self.label_encoder.fit_transform(labels)
 
-        # Разделение на train/validation
         X_train, X_val, y_train, y_val = train_test_split(
             X, y,
             test_size=0.15,
@@ -312,7 +295,6 @@ class UltraMegaJarvis:
         print(f"📚 Обучающая выборка: {X_train.shape[0]} примеров")
         print(f"🔍 Валидационная выборка: {X_val.shape[0]} примеров")
 
-        # Создание модели
         self.model = self.create_ultra_mega_network(
             X_train.shape[1],
             len(self.label_encoder.classes_)
@@ -321,7 +303,6 @@ class UltraMegaJarvis:
         print("🧠 Архитектура нейросети:")
         self.model.summary()
 
-        # ПРОФЕССИОНАЛЬНЫЕ callback'ы
         early_stopping = EarlyStopping(
             monitor='val_loss',
             patience=50,
@@ -347,7 +328,6 @@ class UltraMegaJarvis:
 
         print("🔥 Начинаем МЕГА обучение...")
 
-        # МЕГА обучение
         history = self.model.fit(
             X_train, y_train,
             epochs=500,
@@ -358,12 +338,10 @@ class UltraMegaJarvis:
             shuffle=True
         )
 
-        # Загрузка лучшей модели
         if os.path.exists('best_jarvis_model.h5'):
             self.model.load_weights('best_jarvis_model.h5')
             print("✅ Загружена лучшая модель из checkpoint!")
 
-        # Анализ результатов
         final_train_acc = history.history['accuracy'][-1]
         final_val_acc = history.history['val_accuracy'][-1]
         final_train_loss = history.history['loss'][-1]
@@ -375,7 +353,6 @@ class UltraMegaJarvis:
         print(f"📉 Финальные потери на обучении: {final_train_loss:.4f}")
         print(f"📋 Финальные потери на валидации: {final_val_loss:.4f}")
 
-        # Сохранение модели
         self.save_model()
 
     def save_model(self):
@@ -401,7 +378,6 @@ class UltraMegaJarvis:
             self.label_encoder = model_data['label_encoder']
             self.intents = model_data['intents']
 
-            # Нужно пересоздать архитектуру модели
             texts, _ = self.prepare_training_data()
             X_sample = self.vectorizer.transform(texts[:1]).toarray()
 
@@ -410,7 +386,6 @@ class UltraMegaJarvis:
                 len(self.label_encoder.classes_)
             )
 
-            # Загружаем веса
             self.model.load_weights('best_jarvis_model.h5')
 
             print("✅ Модель загружена успешно!")
@@ -432,8 +407,7 @@ class UltraMegaJarvis:
             intent_index = np.argmax(prediction)
             confidence = np.max(prediction)
 
-            # Адаптивный порог уверенности
-            adaptive_threshold = 0.6  # Высокий порог для надежности
+            adaptive_threshold = 0.6
 
             if confidence > adaptive_threshold:
                 return self.label_encoder.inverse_transform([intent_index])[0], confidence
@@ -487,7 +461,6 @@ class UltraMegaJarvis:
         try:
             text = text.lower()
 
-            # Расширенная замена слов на операторы
             replacements = {
                 'плюс': '+', 'минус': '-', 'прибавить': '+', 'отнять': '-',
                 'умножить на': '*', 'умножить': '*', 'умножит': '*',
@@ -499,14 +472,12 @@ class UltraMegaJarvis:
             for word, replacement in replacements.items():
                 text = text.replace(word, replacement)
 
-            # Извлекаем все числа (включая десятичные)
             numbers = re.findall(r'\d+\.?\d*', text)
             numbers = [float(num) for num in numbers]
 
             if not numbers:
                 return "Не найдены числа для вычисления"
 
-            # Определяем операцию
             if '+' in text:
                 result = sum(numbers)
                 return f"{result}"
@@ -528,7 +499,6 @@ class UltraMegaJarvis:
                 else:
                     return "Недостаточно чисел для деления"
             else:
-                # Если операция не указана, возвращаем первое число
                 return f"{numbers[0]}"
 
         except Exception as e:
@@ -588,7 +558,6 @@ class UltraMegaJarvis:
             command = self.listen()
             running = self.process_command(command)
 
-
 def test_ultra_mega_network():
     """Тестирование УЛЬТРА-МЕГА нейросети"""
     print("🧪 Запуск тестирования УЛЬТРА-МЕГА нейросети...")
@@ -628,7 +597,6 @@ def test_ultra_mega_network():
         results.append((phrase, intent, confidence, status))
         print(f"{status} '{phrase}' -> {intent} (уверенность: {confidence:.2f})")
 
-    # Статистика
     successful = sum(1 for _, _, _, status in results if status == "✅")
     total = len(results)
 
@@ -636,10 +604,8 @@ def test_ultra_mega_network():
 
 
 if __name__ == "__main__":
-    # Тестирование
     test_ultra_mega_network()
 
-    # Запуск ассистента
     print("\n" + "=" * 80)
     print("🚀 ЗАПУСК УЛЬТРА-МЕГА АССИСТЕНТА:")
     print("=" * 80)
