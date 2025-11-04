@@ -15,77 +15,74 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCh
 import pickle
 import re
 import os
+import time
 
 
-class UltraMegaJarvis:
-    def __init__(self):
+class Matt:
+    def __init__(self, load_existing_model=True):
         self.recognizer = sr.Recognizer()
         self.microphone = sr.Microphone()
         self.tts_engine = pyttsx3.init()
 
-        self.intents = self.create_mega_dataset()
+        self.recognizer.pause_threshold = 1.5
+
+        self.activation_words = ["мэтт", "мет", "мэт", "мат", "метт"]
+        self.is_activated = False
+
+        self.intents = self.create_dataset()
 
         self.vectorizer = None
         self.label_encoder = None
         self.model = None
-        self.train_ultra_mega_network()
 
-        print("Профессиональная калибровка микрофона...")
+        if load_existing_model and os.path.exists('best_matt_model.h5') and os.path.exists('matt_model.pkl'):
+            print("Загрузка обученной модели...")
+            self.load_model()
+        else:
+            print("Обучение модели...")
+            self.train_model()
+
+        print("Калибровка микрофона...")
         with self.microphone as source:
             self.recognizer.adjust_for_ambient_noise(source, duration=3)
-        print("Калибровка завершена!")
+        print("Калибровка завершена!\n")
 
-    def create_mega_dataset(self):
-        """Создание ультра-мега датасета"""
+    def create_dataset(self):
+        """Создание датасета"""
         return {
             "greeting": {
-                "patterns": self.generate_variations([
+                "patterns": [
                     "привет", "здравствуй", "добрый день", "хай", "hello",
                     "доброе утро", "добрый вечер", "приветствую", "салют",
                     "привет друг", "привет ассистент", "здравствуйте", "приветик",
                     "доброй ночи", "привет всем", "здорово", "мое почтение",
                     "доброго времени суток", "приветствую вас", "рад тебя видеть",
-                    "привет как дела", "привет старший", "здравствуй джарвис",
-                    "привет умник", "добрый", "приветствие", "здарова", "хай там",
-                    "приветствую тебя", "доброго здоровья", "приветики", "здоровенько",
-                    "доброго дня", "приветик всем", "здаров", "привет народ",
-                    "добрый вечерок", "доброе утречко", "приветики пистолетики"
-                ], 50),
+                    "привет как дела", "привет старший", "здравствуй мэтт",
+                    "привет умник", "добрый", "приветствие", "здарова", "хай там"
+                ],
                 "responses": [
                     "Здравствуйте!", "Привет! Как дела?", "Рад вас слышать!", "Приветствую!",
-                    "Здорово!", "Привет! Чем могу помочь?", "Добрый день!", "Привет, друг!",
-                    "Приветствую вас!", "Здравствуй! Как настроение?"
+                    "Здорово!", "Привет! Чем могу помочь?", "Добрый день!", "Привет, друг!"
                 ]
             },
             "time": {
-                "patterns": self.generate_variations([
+                "patterns": [
                     "который час", "сколько время", "время", "time", "current time",
                     "скажи время", "подскажи время", "сколько времени", "который сейчас час",
-                    "время сейчас", "текущее время", "сколько сейчас времени", "который час времени",
-                    "подскажи который час", "скажи который час", "время узнать", "узнать время",
-                    "сколько на часах", "который час на часах", "время суток", "точное время",
-                    "подскажи текущее время", "скажи текущее время", "время сейчас сколько",
-                    "который час подскажи", "сколько времени сейчас", "время узнать сейчас",
-                    "текущее время узнать", "время на данный момент", "который час времени сейчас"
-                ], 40),
+                    "время сейчас", "текущее время", "сколько сейчас времени"
+                ],
                 "responses": ["Сейчас {}", "Текущее время: {}", "На часах {}", "Время: {}"]
             },
             "date": {
-                "patterns": self.generate_variations([
+                "patterns": [
                     "какое число", "какая дата", "дата", "date", "today",
                     "какой сегодня день", "подскажи дату", "какое сегодня число",
-                    "число сегодня", "текущая дата", "какой сегодня день месяца",
-                    "подскажи какое число", "скажи дату", "какое число сегодня",
-                    "какой сегодня число", "дата сегодня", "сегодняшняя дата",
-                    "какой день сегодня", "число месяца", "текущее число",
-                    "подскажи сегодняшнюю дату", "скажи сегодняшнее число", "какое сегодня число месяца",
-                    "текущая дата сегодня", "сегодня какое число", "число сегодняшнее",
-                    "дата текущего дня", "какой сегодня день недели", "текущий день месяца"
-                ], 40),
+                    "число сегодня", "текущая дата", "какой сегодня день месяца"
+                ],
                 "responses": ["Сегодня {}", "Текущая дата: {}", "Сегодняшнее число: {}", "Дата: {}"]
             },
             "calculation": {
-                "patterns": self.generate_variations([
+                "patterns": [
                     "посчитай", "вычисли", "сколько будет", "calculate", "calc",
                     "сложи", "прибавь", "отними", "умножь", "раздели",
                     "сложи числа", "вычисли пример", "реши пример", "посчитай пример",
@@ -95,110 +92,61 @@ class UltraMegaJarvis:
                     "сколько получится", "какой результат", "вычисли значение",
                     "реши математический пример", "вычисли арифметическое выражение",
                     "посчитай выражение", "вычисли сумму", "найди разность", "умножь цифры",
-                    "раздели цифры", "вычисли произведение", "найди частное"
-                ], 50),
-                "responses": ["Результат: {}", "Ответ: {}", "Получается: {}", "Вычисляю: {}",
-                              "Результат вычислений: {}"]
+                    "раздели цифры", "вычисли произведение", "найди частное",
+                    "обучи математике", "научи решать примеры", "объясни вычисления",
+                    "покажи как считать", "обучение математике", "научи математике"
+                ],
+                "responses": ["Результат: {}", "Ответ: {}", "Получается: {}", "Вычисляю: {}"]
+            },
+            "math_learning": {
+                "patterns": [
+                    "обучи математике", "научи решать примеры", "объясни вычисления",
+                    "покажи как считать", "обучение математике", "научи математике",
+                    "объясни математику", "научи считать", "как решать примеры",
+                    "обучение вычислениям", "математическое обучение", "научи арифметике",
+                    "объясни сложение", "объясни вычитание", "объясни умножение",
+                    "объясни деление", "как складывать", "как вычитать", "как умножать",
+                    "как делить", "урок математики", "математический урок"
+                ],
+                "responses": [
+                    "С удовольствием научу вас математике! Например: '5 плюс 3' будет 8.",
+                    "Давайте решать примеры вместе! Скажите 'посчитай 10 минус 4'.",
+                    "Математика - это просто! Попробуйте: '6 умножить на 7' равно 42.",
+                    "Я помогу с вычислениями. Просто скажите 'сколько будет 15 разделить на 3'."
+                ]
             },
             "thanks": {
-                "patterns": self.generate_variations([
+                "patterns": [
                     "спасибо", "благодарю", "молодец", "thanks", "thank you",
-                    "ты лучший", "отлично", "хорошая работа", "отлично работает",
-                    "спасибо помощник", "благодарю тебя", "спасибо большое",
-                    "огромное спасибо", "благодарствую", "признателен", "ценю",
-                    "ты крут", "отлично справился", "хорошо работаешь", "отличная работа",
-                    "благодарю за помощь", "спасибо за помощь", "ты супер", "отлично помог",
-                    "выручил", "помог хорошо", "работаешь отлично", "спасибо дружище",
-                    "благодарность", "признательность", "ценю помощь", "спасибо за поддержку"
-                ], 40),
+                    "ты лучший", "отлично", "хорошая работа", "отлично работает"
+                ],
                 "responses": [
-                    "Всегда рад помочь!", "Пожалуйста!", "Обращайтесь!", "Рад был помочь!",
-                    "Не за что!", "Для вас всегда!", "Это моя работа!", "Всегда к вашим услугам!"
+                    "Всегда рад помочь!", "Пожалуйста!", "Обращайтесь!", "Рад был помочь!"
                 ]
             },
             "mood": {
-                "patterns": self.generate_variations([
+                "patterns": [
                     "как дела", "как настроение", "как себя чувствуешь", "как жизнь",
                     "как твои дела", "что нового", "как ты", "how are you",
-                    "расскажи о настроении", "какое у тебя настроение", "как твое самочувствие",
-                    "как поживаешь", "что у тебя нового", "как твои успехи", "как ты сегодня",
-                    "как твое здоровье", "что расскажешь", "как жизнь молодая", "как сам",
-                    "как у тебя дела", "настроение какое", "как твое настроение сегодня",
-                    "что нового у тебя", "как твои дела сегодня", "как твое самочувствие сегодня",
-                    "как твое состояние", "как твои дела вообще", "что нового в жизни",
-                    "как твое положение", "как твои успехи сегодня", "как твое здоровье сегодня",
-                    "как твое настроение в целом", "что нового расскажешь", "как твои дела вообще"
-                ], 50),
+                    "расскажи о настроении", "какое у тебя настроение"
+                ],
                 "responses": [
                     "Всё отлично, спасибо!",
                     "Прекрасно! Готов помогать.",
                     "Как у настоящего ИИ - без эмоций, но эффективно!",
-                    "Замечательно! А у вас?",
-                    "Отлично! Программируюсь и радуюсь жизни!",
-                    "Супер! Готов к новым задачам!",
-                    "Все хорошо, работаю в штатном режиме!",
-                    "Настроение отличное! А у вас?",
-                    "Лучше всех! Чем могу помочь?",
-                    "Великолепно! Готов к работе!"
+                    "Замечательно! А у вас?"
                 ]
             },
             "goodbye": {
-                "patterns": self.generate_variations([
+                "patterns": [
                     "пока", "до свидания", "выход", "bye", "goodbye",
-                    "закончим", "до встречи", "прощай", "всего хорошего",
-                    "пока пока", "до завтра", "спокойной ночи", "всего доброго",
-                    "до скорого", "увидимся", "бывай", "прощевайте", "до свиданья",
-                    "пока дружище", "до следующего раза", "завершить работу",
-                    "отключись", "выключись", "закончить", "стоп", "хватит",
-                    "до скорой встречи", "всего наилучшего", "пока всего хорошего",
-                    "до новых встреч", "заканчиваем", "прощай друг", "до завтрашнего дня",
-                    "спокойной ночи друг", "всего доброго друг", "бывай здоров"
-                ], 40),
+                    "закончим", "до встречи", "прощай", "всего хорошего"
+                ],
                 "responses": [
-                    "До свидания!", "Удачи!", "Был рад помочь!", "До новых встреч!",
-                    "Пока! Обращайтесь еще!", "Всего доброго!", "До скорой встречи!",
-                    "Спокойной ночи!", "Всего наилучшего!", "Бывай!"
+                    "До свидания!", "Удачи!", "Был рад помочь!", "До новых встреч!"
                 ]
             }
         }
-
-    def generate_variations(self, base_phrases, target_count):
-        """Генерация вариаций фраз"""
-        variations = base_phrases.copy()
-
-        if len(variations) >= target_count:
-            return variations[:target_count]
-
-        synonyms = {
-            "привет": ["приветик", "приветствую", "здравствуй"],
-            "спасибо": ["благодарю", "мерси", "thanks"],
-            "пока": ["до свидания", "прощай", "бывай"],
-            "как дела": ["как жизнь", "как сам", "как поживаешь"],
-            "время": ["который час", "сколько времени", "время суток"],
-            "дата": ["какое число", "какой день", "текущая дата"]
-        }
-
-        while len(variations) < target_count:
-            for phrase in base_phrases:
-                if len(variations) >= target_count:
-                    break
-
-                for word, syns in synonyms.items():
-                    if word in phrase and len(variations) < target_count:
-                        for syn in syns:
-                            new_phrase = phrase.replace(word, syn)
-                            if new_phrase not in variations:
-                                variations.append(new_phrase)
-                                if len(variations) >= target_count:
-                                    break
-
-                if len(variations) < target_count and random.random() > 0.7:
-                    variations.append(phrase + "!")
-
-                if len(variations) < target_count and random.random() > 0.7:
-                    variations.append(phrase + "?")
-
-        return variations[:target_count]
 
     def prepare_training_data(self):
         """Подготовка данных для обучения"""
@@ -213,21 +161,17 @@ class UltraMegaJarvis:
         return texts, labels
 
     def preprocess_text(self, text):
-        """Профессиональная предобработка текста"""
+        """Предобработка текста"""
         text = text.lower()
         text = re.sub(r'[^\w\s!?]', ' ', text)
         text = re.sub(r'\s+', ' ', text).strip()
         return text
 
-    def create_ultra_mega_network(self, input_dim, output_dim):
-        """Создание УЛЬТРА-МЕГА архитектуры нейросети"""
+    def create_model(self, input_dim, output_dim):
+        """Создание архитектуры нейросети"""
         model = Sequential([
-            Dense(1024, activation='relu', input_shape=(input_dim,),
+            Dense(512, activation='relu', input_shape=(input_dim,),
                   kernel_regularizer=l2(0.001)),
-            BatchNormalization(),
-            Dropout(0.6),
-
-            Dense(512, activation='relu', kernel_regularizer=l2(0.001)),
             BatchNormalization(),
             Dropout(0.5),
 
@@ -245,42 +189,32 @@ class UltraMegaJarvis:
         ])
 
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(
-                learning_rate=0.0005,
-                beta_1=0.9,
-                beta_2=0.999,
-                epsilon=1e-7
-            ),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
             loss='sparse_categorical_crossentropy',
-            metrics=['accuracy', 'sparse_categorical_accuracy']
+            metrics=['accuracy']
         )
 
         return model
 
-    def train_ultra_mega_network(self):
-        """УЛЬТРА-МЕГА обучение нейросети"""
-        print("🚀 Запуск УЛЬТРА-МЕГА обучения нейросети...")
+    def train_model(self, epochs=1000):
+        """Обучение нейросети"""
+        print("Запуск обучения нейросети...")
 
         texts, labels = self.prepare_training_data()
 
-        print(f"📊 Всего примеров для обучения: {len(texts)}")
-        print(f"🎯 Количество классов: {len(set(labels))}")
+        print(f"Всего примеров для обучения: {len(texts)}")
+        print(f"Количество классов: {len(set(labels))}")
 
         self.vectorizer = TfidfVectorizer(
             analyzer='word',
-            ngram_range=(1, 3),
-            max_features=2000,
+            ngram_range=(1, 2),
+            max_features=1000,
             min_df=1,
-            max_df=0.85,
-            stop_words=None,
-            norm='l2',
-            use_idf=True,
-            smooth_idf=True,
-            sublinear_tf=True
+            max_df=0.9
         )
 
         X = self.vectorizer.fit_transform(texts).toarray()
-        print(f"🔢 Размерность данных после векторизации: {X.shape}")
+        print(f"Размерность данных после векторизации: {X.shape}")
 
         self.label_encoder = LabelEncoder()
         y = self.label_encoder.fit_transform(labels)
@@ -292,66 +226,55 @@ class UltraMegaJarvis:
             stratify=y
         )
 
-        print(f"📚 Обучающая выборка: {X_train.shape[0]} примеров")
-        print(f"🔍 Валидационная выборка: {X_val.shape[0]} примеров")
+        print(f"Обучающая выборка: {X_train.shape[0]} примеров")
+        print(f"Валидационная выборка: {X_val.shape[0]} примеров\n")
 
-        self.model = self.create_ultra_mega_network(
-            X_train.shape[1],
-            len(self.label_encoder.classes_)
-        )
-
-        print("🧠 Архитектура нейросети:")
-        self.model.summary()
+        self.model = self.create_model(X_train.shape[1], len(self.label_encoder.classes_))
 
         early_stopping = EarlyStopping(
             monitor='val_loss',
             patience=50,
             restore_best_weights=True,
-            verbose=1,
-            min_delta=0.0001
+            verbose=1
         )
 
         reduce_lr = ReduceLROnPlateau(
             monitor='val_loss',
             factor=0.5,
             patience=20,
-            min_lr=0.00001,
+            min_lr=0.0001,
             verbose=1
         )
 
         model_checkpoint = ModelCheckpoint(
-            'best_jarvis_model.h5',
+            'best_matt_model.h5',
             monitor='val_accuracy',
             save_best_only=True,
             verbose=1
         )
 
-        print("🔥 Начинаем МЕГА обучение...")
+        print("Начинаем обучение...\n")
 
         history = self.model.fit(
             X_train, y_train,
-            epochs=500,
-            batch_size=64,
+            epochs=epochs,
+            batch_size=32,
             verbose=1,
             validation_data=(X_val, y_val),
             callbacks=[early_stopping, reduce_lr, model_checkpoint],
             shuffle=True
         )
 
-        if os.path.exists('best_jarvis_model.h5'):
-            self.model.load_weights('best_jarvis_model.h5')
-            print("✅ Загружена лучшая модель из checkpoint!")
+        if os.path.exists('best_matt_model.h5'):
+            self.model.load_weights('best_matt_model.h5')
+            print("Загружена лучшая модель!")
 
         final_train_acc = history.history['accuracy'][-1]
         final_val_acc = history.history['val_accuracy'][-1]
-        final_train_loss = history.history['loss'][-1]
-        final_val_loss = history.history['val_loss'][-1]
 
-        print(f"\n🎉 УЛЬТРА-МЕГА обучение завершено!")
-        print(f"📈 Финальная точность на обучении: {final_train_acc:.4f}")
-        print(f"📊 Финальная точность на валидации: {final_val_acc:.4f}")
-        print(f"📉 Финальные потери на обучении: {final_train_loss:.4f}")
-        print(f"📋 Финальные потери на валидации: {final_val_loss:.4f}")
+        print(f"\nОбучение завершено!")
+        print(f"Точность на обучении: {final_train_acc:.4f}")
+        print(f"Точность на валидации: {final_val_acc:.4f}\n")
 
         self.save_model()
 
@@ -363,15 +286,15 @@ class UltraMegaJarvis:
             'intents': self.intents
         }
 
-        with open('jarvis_model.pkl', 'wb') as f:
+        with open('matt_model.pkl', 'wb') as f:
             pickle.dump(model_data, f)
 
-        print("💾 Модель сохранена в jarvis_model.pkl")
+        print("Модель сохранена\n")
 
     def load_model(self):
         """Загрузка обученной модели"""
         try:
-            with open('jarvis_model.pkl', 'rb') as f:
+            with open('matt_model.pkl', 'rb') as f:
                 model_data = pickle.load(f)
 
             self.vectorizer = model_data['vectorizer']
@@ -381,21 +304,17 @@ class UltraMegaJarvis:
             texts, _ = self.prepare_training_data()
             X_sample = self.vectorizer.transform(texts[:1]).toarray()
 
-            self.model = self.create_ultra_mega_network(
-                X_sample.shape[1],
-                len(self.label_encoder.classes_)
-            )
+            self.model = self.create_model(X_sample.shape[1], len(self.label_encoder.classes_))
+            self.model.load_weights('best_matt_model.h5')
 
-            self.model.load_weights('best_jarvis_model.h5')
-
-            print("✅ Модель загружена успешно!")
+            print("Модель загружена успешно!\n")
             return True
         except Exception as e:
-            print(f"❌ Ошибка загрузки модели: {e}")
+            print(f"Ошибка загрузки модели: {e}")
             return False
 
     def predict_intent(self, text):
-        """УЛЬТРА-точное предсказание намерения"""
+        """Предсказание намерения"""
         if not text:
             return None, 0.0
 
@@ -407,41 +326,78 @@ class UltraMegaJarvis:
             intent_index = np.argmax(prediction)
             confidence = np.max(prediction)
 
-            adaptive_threshold = 0.6
-
-            if confidence > adaptive_threshold:
+            if confidence > 0.6:
                 return self.label_encoder.inverse_transform([intent_index])[0], confidence
             else:
                 return "unknown", confidence
 
         except Exception as e:
-            print(f"❌ Ошибка предсказания: {e}")
+            print(f"Ошибка предсказания: {e}")
             return "unknown", 0.0
 
     def speak(self, text):
-        """Произносит текст"""
-        print(f"🤖 Джарвис: {text}")
-        self.tts_engine.say(text)
-        self.tts_engine.runAndWait()
+        """Произносит текст (теперь без звука)"""
+        print(f"Мэтт: {text}\n")
 
-    def listen(self):
-        """Слушает и распознает речь"""
+    def check_activation_word(self, text):
+        """Проверяет наличие ключевого слова в тексте"""
+        text_lower = text.lower()
+        for word in self.activation_words:
+            if word in text_lower:
+                return True, word
+        return False, None
+
+    def listen_for_activation(self):
+        """Слушает ключевое слово для активации"""
         try:
             with self.microphone as source:
-                print("🎤 Слушаю...")
-                audio = self.recognizer.listen(source, timeout=10, phrase_time_limit=8)
+                print("Ожидание ключевого слова 'Мэтт'...")
+                time.sleep(0.5)
+                audio = self.recognizer.listen(source, timeout=20, phrase_time_limit=10)
+
+            text = self.recognizer.recognize_google(audio, language="ru-RU")
+
+            has_activation, activation_word = self.check_activation_word(text)
+
+            if has_activation:
+                print(f"Ключевое слово '{activation_word}' распознано")
+                for word in self.activation_words:
+                    if word in text.lower():
+                        command = text.lower().split(word, 1)[1].strip()
+                        if command:
+                            print(f"Команда: {command}")
+                            return command
+                        else:
+                            return True
+            return None
+
+        except sr.WaitTimeoutError:
+            return None
+        except sr.UnknownValueError:
+            return None
+        except sr.RequestError as e:
+            print(f"Ошибка сервиса распознавания: {e}")
+            return None
+
+    def listen_for_command(self):
+        """Слушает команду после активации"""
+        try:
+            self.speak("Слушаю")
+            with self.microphone as source:
+                time.sleep(0.5)
+                audio = self.recognizer.listen(source, timeout=15, phrase_time_limit=10)
 
             command = self.recognizer.recognize_google(audio, language="ru-RU")
-            print(f"👤 Вы сказали: {command}")
+            print(f"Команда: {command}")
             return command.lower()
 
         except sr.WaitTimeoutError:
             return ""
         except sr.UnknownValueError:
-            print("❌ Не удалось распознать речь")
+            print("Не удалось распознать речь")
             return ""
         except sr.RequestError as e:
-            print(f"❌ Ошибка сервиса распознавания: {e}")
+            print(f"Ошибка сервиса распознавания: {e}")
             return ""
 
     def get_time(self):
@@ -456,50 +412,85 @@ class UltraMegaJarvis:
                   "июля", "августа", "сентября", "октября", "ноября", "декабря"]
         return f"Сегодня {now.day} {months[now.month - 1]} {now.year} года"
 
-    def calculate_expression(self, text):
-        """Профессиональное вычисление математического выражения"""
+    def safe_calculate(self, expression):
+        """Безопасное вычисление математического выражения"""
         try:
-            text = text.lower()
+            safe_chars = set('0123456789+-*/.() ')
+            cleaned_expression = ''.join(char for char in expression if char in safe_chars)
 
+            if not cleaned_expression:
+                return None, "Пустое выражение"
+
+            result = eval(cleaned_expression)
+            return result, None
+
+        except ZeroDivisionError:
+            return None, "Деление на ноль невозможно"
+        except Exception as e:
+            return None, f"Ошибка вычисления: {str(e)}"
+
+    def calculate_expression(self, text):
+        """Вычисляет математическое выражение - улучшенная версия"""
+        try:
+            numbers = re.findall(r'\d+', text)
+            numbers = [int(num) for num in numbers]
+
+            if numbers:
+                if any(word in text for word in ['плюс', 'прибавь', 'сложи', '+']):
+                    result = sum(numbers)
+                    explanation = f"{' + '.join(map(str, numbers))} = {result}"
+                    return f"{result} ({explanation})"
+
+                elif any(word in text for word in ['минус', 'отними', 'вычти', '-']):
+                    if len(numbers) >= 2:
+                        result = numbers[0] - sum(numbers[1:])
+                        explanation = f"{numbers[0]} - {sum(numbers[1:])} = {result}"
+                        return f"{result} ({explanation})"
+                    else:
+                        return f"{numbers[0]}"
+
+                elif any(word in text for word in ['умножь', 'умножить', '*', '×']):
+                    result = 1
+                    for num in numbers:
+                        result *= num
+                    explanation = f"{' × '.join(map(str, numbers))} = {result}"
+                    return f"{result} ({explanation})"
+
+                elif any(word in text for word in ['раздели', 'дели', '/', '÷']):
+                    if len(numbers) >= 2:
+                        result = numbers[0]
+                        for num in numbers[1:]:
+                            if num != 0:
+                                result /= num
+                        explanation = f"{numbers[0]} ÷ {numbers[1]} = {result:.2f}"
+                        return f"{result:.2f} ({explanation})"
+                    else:
+                        return "Недостаточно чисел для деления"
+
+            math_text = text.lower()
             replacements = {
-                'плюс': '+', 'минус': '-', 'прибавить': '+', 'отнять': '-',
-                'умножить на': '*', 'умножить': '*', 'умножит': '*',
-                'делить на': '/', 'разделить на': '/', 'делить': '/',
-                'и': '', 'на': '', 'сколько будет': '', 'посчитай': '',
-                'вычисли': '', 'сумма': '+', 'разность': '-', 'произведение': '*'
+                'плюс': '+', 'минус': '-', 'прибавь': '+', 'отними': '-', 'вычти': '-',
+                'умножь на': '*', 'умножить на': '*', 'умножь': '*', 'умножить': '*',
+                'раздели на': '/', 'дели на': '/', 'раздели': '/', 'дели': '/',
+                'скобка открывается': '(', 'скобка закрывается': ')',
+                'открывающая скобка': '(', 'закрывающая скобка': ')'
             }
 
-            for word, replacement in replacements.items():
-                text = text.replace(word, replacement)
+            for word, symbol in replacements.items():
+                math_text = math_text.replace(word, symbol)
 
-            numbers = re.findall(r'\d+\.?\d*', text)
-            numbers = [float(num) for num in numbers]
+            math_text = re.sub(r'[^\d\+\-\*\/\(\)\.\s]', '', math_text)
+            math_text = math_text.strip()
 
-            if not numbers:
-                return "Не найдены числа для вычисления"
-
-            if '+' in text:
-                result = sum(numbers)
-                return f"{result}"
-            elif '-' in text:
-                result = numbers[0] - sum(numbers[1:]) if len(numbers) > 1 else numbers[0]
-                return f"{result}"
-            elif '*' in text:
-                result = 1
-                for num in numbers:
-                    result *= num
-                return f"{result}"
-            elif '/' in text:
-                if len(numbers) >= 2:
-                    result = numbers[0]
-                    for num in numbers[1:]:
-                        if num != 0:
-                            result /= num
-                    return f"{result:.2f}"
+            if math_text:
+                result, error = self.safe_calculate(math_text)
+                if error is None:
+                    explanation = f"{math_text} = {result}"
+                    return f"{result} ({explanation})"
                 else:
-                    return "Недостаточно чисел для деления"
+                    return f"Ошибка: {error}"
             else:
-                return f"{numbers[0]}"
+                return "Не могу распознать математическое выражение"
 
         except Exception as e:
             return f"Ошибка в вычислениях: {str(e)}"
@@ -509,8 +500,10 @@ class UltraMegaJarvis:
         if not command:
             return True
 
+        time.sleep(0.3)
+
         intent, confidence = self.predict_intent(command)
-        print(f"🧠 УЛЬТРА-нейросеть определила: {intent} (уверенность: {confidence:.2f})")
+        print(f"Определено намерение: {intent} (уверенность: {confidence:.2f})\n")
 
         if intent == "greeting":
             response = random.choice(self.intents["greeting"]["responses"])
@@ -545,70 +538,83 @@ class UltraMegaJarvis:
             return False
 
         else:
-            self.speak("Извините, я не понял команду. Попробуйте сказать 'привет', 'время', 'дата' или 'как дела'.")
+            self.speak("Извините, я не понял команду.")
 
         return True
 
     def run(self):
         """Основной цикл работы ассистента"""
-        self.speak("УЛЬТРА-МЕГА нейросетевой Джарвис активирован! Готов к работе.")
+        print("Ассистент Мэтт активирован! Готов к работе.\n")
+        print("Скажите 'Мэтт' для активации...\n")
 
         running = True
         while running:
-            command = self.listen()
-            running = self.process_command(command)
+            result = self.listen_for_activation()
 
-def test_ultra_mega_network():
-    """Тестирование УЛЬТРА-МЕГА нейросети"""
-    print("🧪 Запуск тестирования УЛЬТРА-МЕГА нейросети...")
+            if result is True:
+                command = self.listen_for_command()
+                if command:
+                    running = self.process_command(command)
+            elif result:
+                running = self.process_command(result)
 
-    jarvis = UltraMegaJarvis()
+            time.sleep(0.2)
+
+
+def train_extended_model():
+    """Функция для расширенного обучения модели"""
+    print("=" * 50)
+    print("ЗАПУСК РАСШИРЕННОГО ОБУЧЕНИЯ МОДЕЛИ")
+    print("=" * 50)
+
+    matt = Matt(load_existing_model=False)
+
+    print("\nНачинаем расширенное обучение...")
+    matt.train_model(epochs=2000)
+    print("Расширенное обучение завершено!\n")
+
+
+def test_model():
+    """Функция для тестирования модели"""
+    print("=" * 50)
+    print("ТЕСТИРОВАНИЕ МОДЕЛИ")
+    print("=" * 50)
+
+    matt = Matt()
 
     test_phrases = [
         "привет",
-        "привет друг",
-        "здравствуйте",
         "который час",
         "какая дата",
         "посчитай 5 плюс 3",
         "сколько будет 10 умножить на 2",
         "спасибо",
         "как дела",
-        "как настроение",
-        "что нового",
-        "как твои дела",
-        "пока",
-        "до свидания",
-        "добрый день",
-        "скажи время",
-        "какое сегодня число",
-        "вычисли 15 минус 7",
-        "прибавь 20 к 30"
+        "пока"
     ]
 
-    print("\n" + "=" * 80)
-    print("🧪 ТЕСТИРОВАНИЕ УЛЬТРА-МЕГА НЕЙРОСЕТИ:")
-    print("=" * 80)
-
-    results = []
+    print("\nТестирование классификации команд:")
     for phrase in test_phrases:
-        intent, confidence = jarvis.predict_intent(phrase)
-        status = "✅" if confidence > 0.7 else "⚠️" if confidence > 0.5 else "❌"
-        results.append((phrase, intent, confidence, status))
-        print(f"{status} '{phrase}' -> {intent} (уверенность: {confidence:.2f})")
+        intent, confidence = matt.predict_intent(phrase)
+        print(f"'{phrase}' -> {intent} (уверенность: {confidence:.2f})")
 
-    successful = sum(1 for _, _, _, status in results if status == "✅")
-    total = len(results)
-
-    print(f"\n📊 Результаты: {successful}/{total} успешных распознаваний ({successful / total * 100:.1f}%)")
+    print("\nТестирование завершено!\n")
 
 
 if __name__ == "__main__":
-    test_ultra_mega_network()
+    print("=" * 50)
+    print("АССИСТЕНТ МЭТТ")
+    print("=" * 50)
+    print()
 
-    print("\n" + "=" * 80)
-    print("🚀 ЗАПУСК УЛЬТРА-МЕГА АССИСТЕНТА:")
-    print("=" * 80)
+    # ВАРИАНТЫ ЗАПУСКА:
 
-    jarvis = UltraMegaJarvis()
-    jarvis.run()
+    # 1. Только тестирование модели (без запуска ассистента)
+    # test_model()
+
+    # 2. Расширенное обучение модели (2000 эпох)
+    # train_extended_model()
+
+    # 3. Обычный запуск ассистента
+    matt = Matt()
+    matt.run()
